@@ -16,11 +16,16 @@
     }
 
     function save() {
-      var snippet = document.getElementById("snippet").value
-      var button = document.getElementById("save-trigger")
+      const snippet = document.getElementById("snippet").value
+      const button = document.getElementById("save-trigger")
 
+      if (button.classList.contains("loading")) {
+        // Button has already been clicked.
+        return;
+      }
       button.classList.add("loading")
-      var blob = new Blob(
+
+      const blob = new Blob(
         [
           "<html><head>" +
           '<meta http-equiv="content-type" content="text/html; charset=UTF-8"/>' +
@@ -33,27 +38,30 @@
         ],
         { type: "text/html" }
       )
-      var formData = new FormData()
+      const formData = new FormData()
       formData.append("file", blob)
 
       const uuid = generateUUID()
+      let headers;
       fetch(`/skynet/skyfile/${uuid}?filename=skybin.html`, {
         method: "POST",
         body: formData
       })
-        .then(response => response.json())
+        .then(response => {
+          headers = response.headers
+          return response.json()
+        })
         .then(result => {
           button.classList.remove("loading")
 
-          const parts = window.location.hostname.split('.');
-          const domain = parts.slice(-2).join('.');
-          var newLink = document.createElement("a")
-          newLink.href = `https://${domain}/${result.skylink}`
+          const portal = headers.get("skynet-portal-api");
+          const newLink = document.createElement("a")
+          newLink.href = `${portal}/${result.skylink}`
           newLink.classList.add("skylink")
           newLink.setAttribute("target", "_blank")
           newLink.textContent = newLink.href;
           document.getElementById("skylinks").appendChild(newLink)
-          var linkBreak = document.createElement("br")
+          const linkBreak = document.createElement("br")
           document.getElementById("skylinks").appendChild(linkBreak)
         })
         .catch(error => {
